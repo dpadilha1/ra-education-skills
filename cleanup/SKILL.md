@@ -1,6 +1,7 @@
 ---
 name: cleanup
 description: Audit a project folder for bloat, messy structure, security leaks, heavy AI-agent context and a stale archive, then fix only what the user approves. Run it by name (/cleanup in Claude Code, $cleanup in Codex); alone it runs every check, with a mode it runs one (bloat, structure, security, context, archive). Use only when the user asks for it by name. Reports first; never deletes without an explicit OK.
+license: MIT
 compatibility: Agent Skills format (Claude Code, Codex, Gemini CLI and others). Needs git and bash; the scripts run on macOS and Linux.
 argument-hint: "[bloat | structure | security | context | archive | archive all]"
 disable-model-invocation: true

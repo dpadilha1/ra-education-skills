@@ -85,4 +85,4 @@ and a re-run that should come back quiet.
 
 ## License
 
-TBD
+[MIT](LICENSE): use, change and share freely; keep the copyright notice.

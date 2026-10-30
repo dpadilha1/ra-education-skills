@@ -15,5 +15,4 @@ and ideas. Fixed items leave this file; their why lives in the commit message.
 - More skills, one per job, same router pattern (SKILL.md + modes/ + scripts/).
 
 ## Before going public
-- License.
 - CodeRabbit review on the PR that makes the repo public.
