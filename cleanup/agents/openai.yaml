@@ -1,0 +1,4 @@
+# Codex: run this skill only when the user asks for it ($cleanup), never on its own.
+# (Claude Code reads the same rule from disable-model-invocation in SKILL.md.)
+policy:
+  allow_implicit_invocation: false

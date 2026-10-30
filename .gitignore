@@ -1,0 +1,8 @@
+.DS_Store
+# secrets: never in git
+.env*
+.dev.vars*
+!.env.example
+*.pem
+id_rsa*
+.claude/settings.local.json
