@@ -36,7 +36,7 @@ telegram-bot-token	[0-9]{8,10}:AA[A-Za-z0-9_-]{33}
 jwt	eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}
 supabase-secret-key	sb_secret_[A-Za-z0-9_-]{20,}
 bearer-token	Bearer [A-Za-z0-9._~+/-]{20,}=*
-generic-assignment	(api[_-]?key|secret|token|passw(or)?d|auth[_-]?token)[A-Za-z0-9_]*["']?[ 	]*[:=][ 	]*["']?[A-Za-z0-9_/+=.-]{16,}
+generic-assignment	((api[_-]?key|secret|token|passw(or)?d|auth[_-]?token)[A-Za-z0-9_]*["']?[ 	]*[:=][ 	]*["']?[A-Za-z0-9_/+=.-]{16,}|passw(or)?d[A-Za-z0-9_]*["']?[ 	]*[:=][ 	]*["'][^"' 	]{8,}["'])
 EOF
 }
 
@@ -59,11 +59,13 @@ mask() {
       sub("[ \t\"" q "]+$", "", k)
       # names that hold a word about secrets, not a secret (tokenizer, passwordField, tokenCount...)
       if (tolower(k) ~ /^token(s|i[sz]e|i[sz]er|count|length|type)|(field|label|placeholder|input|hint|prompt|count|length|type|name)$/) next
+      sub("[\"" q "]+$", "", m)   # closing quote of a quoted value
       k="key " k
     }
     v=tolower(m)
     if (v ~ /^(process\.env|import\.meta\.env|os\.environ|getenv)/) next
     if (v ~ /your[_-]|example|placeholder|changeme|xxxx|replace[_-]?me|[_-]here$/) next
+    if (n=="generic-assignment" && v ~ /^([$<{%(*]|(passw|secret|string|required|undefined|null|true|false|none|empty|hidden)[a-z_]*$)/) next   # a reference, a type or a label, not a value
     print n, f ":" l, substr(m, 1, 4) "...(" length(m) " chars)", k
   }'
 }
@@ -79,7 +81,9 @@ done | awk -F'\t' '!seen[$2 FS $3 FS $4]++' | cap
 
 echo "== secrets in git history (pattern, commit:file, masked value, key, file now) =="
 # one line per added line in any commit: commit:file:content
-git log --all -p --no-color --no-ext-diff --format='@@COMMIT %h' 2>/dev/null \
+# normal commits first, then merges (-m diffs each parent, which the default log skips)
+{ git log --all -p --no-color --no-ext-diff --format='@@COMMIT %h' 2>/dev/null
+  git log --all --merges -p -m --no-color --no-ext-diff --format='@@COMMIT %h' 2>/dev/null; } \
   | awk '/^@@COMMIT / { c=$2; next }
          /^\+\+\+ / { f=$0; sub(/^\+\+\+ "?b\//, "", f); sub(/\t$/, "", f); sub(/"$/, "", f); next }
          /^\+/ { print c ":" f ":" substr($0, 2) }' > "$tmp"
@@ -89,7 +93,8 @@ patterns | while IFS=$'\t' read -r name re; do
     c="${line%%:*}"; rest="${line#*:}"; f="${rest%%:*}"; body="${rest#*:}"
     printf '%s\n' "$body" | grep -o $flags -e "$re" | while IFS= read -r m; do printf '%s:%s:%s\n' "$c" "$f" "$m"; done
   done | mask "$name"
-done | awk -F'\t' '!seen[$2 FS $3 FS $4]++' | while IFS=$'\t' read -r n cf v k; do
+done | awk -F'\t' '{ f=$2; sub(/^[^:]*:/, "", f); key=$1 FS f FS $3 FS $4; if (!seen[key]++) print }' \
+  | while IFS=$'\t' read -r n cf v k; do
   f="${cf#*:}"; if [ -e "$f" ]; then s="file exists (current-files section says if the secret is still in it)"; else s="file deleted"; fi
   printf '%s\t%s\t%s\t%s\t%s\n' "$n" "$cf" "$v" "$k" "$s"
 done | sort | cap
@@ -112,7 +117,7 @@ echo "== personal data: e-mail addresses per file (count, domains only; generic 
 # a person's work address (name@company) is personal data; info@, contact@... are not
 EMAIL='[A-Za-z0-9._%+:/-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'   # ':' and '/' let a URL credential (user:pass@host) be seen and dropped
 GENERIC_INBOX='^(info|contact|contacto|hello|hola|hi|admin|administrator|support|soporte|suporte|help|ayuda|sales|ventas|vendas|noreply|no-reply|no_reply|donotreply|do-not-reply|team|office|billing|facturacion|invoices|accounts|finance|press|prensa|jobs|careers|hr|rrhh|newsletter|marketing|webmaster|postmaster|hostmaster|abuse|security|privacy|legal|dev|developers?|test|testing|example|mail|email|notifications?|alerts?|bot|git|root|user|me|you|name|someone|user[0-9]*)@'
-RESERVED_DOMAIN='(@(example\.(com|org|net)|localhost|test\.com|email\.com|domain\.com|company\.com|yourcompany\.com|acme\.com|foo\.com|bar\.com|x\.com)|\.(test|example|invalid|localhost|local|internal)|sentry\.io)$'
+RESERVED_DOMAIN='(@(example\.(com|org|net)|localhost|company\.com|yourcompany\.com|acme\.com|foo\.com|bar\.com)|\.(test|example|invalid|localhost|local|internal)|sentry\.io)$'
 TEST_FILES='(^|/)(tests?|__tests__|__mocks__|fixtures|spec)/|\.(test|spec|stories)\.[a-z]+$|(^|/)[^/]*\.example$'
 git grep -nIoE --untracked -e "$EMAIL" -- . ':!*.lock' ':!package-lock.json' ':!pnpm-lock.yaml' 2>/dev/null \
   | awk -v g="$GENERIC_INBOX" -v x="$RESERVED_DOMAIN" -v t="$TEST_FILES" -v s="$email_skip" 'BEGIN { OFS="\t" } {

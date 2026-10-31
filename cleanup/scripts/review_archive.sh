@@ -44,22 +44,25 @@ COMMON='^(README|CLAUDE|AGENTS|GEMINI|index|MOVES|LEDGER|package|package-lock|LI
 
 tmp="$(mktemp "${TMPDIR:-/tmp}/archive.XXXXXX")"
 trap 'rm -f "$tmp" "$tmp".*' EXIT
-# live files (tracked + untracked not ignored), never the archive itself: hash<TAB>path
-git ls-files -s | grep -vE $'\t'"($ARCH_RE)/" | awk -F'\t' '{ split($1, x, " "); print x[2] "\t" $2 }' > "$tmp.live"
-git ls-files --others --exclude-standard | grep -vE "^($ARCH_RE)/" > "$tmp.untracked"
-# shellcheck disable=SC2094  # reads one temp file, appends to another
-[ -s "$tmp.untracked" ] && git hash-object --stdin-paths < "$tmp.untracked" | paste - "$tmp.untracked" >> "$tmp.live"
+# live files (tracked + untracked not ignored), never the archive itself: hash of what is on disk now<TAB>path
+git ls-files --cached --others --exclude-standard | grep -vE "^($ARCH_RE)/" \
+  | while IFS= read -r f; do [ -f "$f" ] && printf '%s\n' "$f"; done > "$tmp.livefiles"
+: > "$tmp.live"
+# shellcheck disable=SC2094  # reads one temp file, writes another
+[ -s "$tmp.livefiles" ] && git hash-object --stdin-paths < "$tmp.livefiles" | paste - "$tmp.livefiles" > "$tmp.live"
 : > "$tmp.review"; T_ALL=0; T_TXT=0; T_MED=0; T_REB=0; young=0; young_kb=0
 now=$(date +%s)
 
 echo "== archive folders (only files git tracks can be restored after a delete) =="
 for a in "${ARCHES[@]}"; do
   on_disk=$(find "$a" -type f ! -name .DS_Store | wc -l | tr -d ' ')
-  in_git=$(git ls-files -- "$a" | wc -l | tr -d ' ')
+  in_git=$(git ls-files -- "$a" | while IFS= read -r f; do [ -f "$f" ] && echo x; done | wc -l | tr -d ' ')   # tracked and still on disk
   if git check-ignore -q "$a/"; then
     echo "$a/	ignored by git: yes (deleting any file is permanent)"
   else
-    echo "$a/	tracked: $in_git files in git, $((on_disk - in_git)) not in git (deleting those is permanent)"
+    changed=$(git diff --name-only HEAD -- "$a" 2>/dev/null | wc -l | tr -d ' ')
+    note=""; [ "$changed" -gt 0 ] && note=" ($changed changed since the last commit: a delete loses those edits)"
+    echo "$a/	tracked: $in_git files in git$note, $((on_disk - in_git)) not in git (deleting those is permanent)"
   fi
 done
 

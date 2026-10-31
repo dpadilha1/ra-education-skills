@@ -78,11 +78,13 @@ awk -F'\t' '
   | sort | cap
 
 echo "== exact duplicates (count, then paths; files under 64 bytes skipped) =="
-git ls-files -s | awk -F'\t' '{ split($1, a, " "); print a[2] "\t" $2 }' | { if [ -n "$ARCH_RE" ]; then grep -vE $'\t'"($ARCH_RE)/"; else cat; fi; } > "$tmp.ls"
-cut -f1 "$tmp.ls" | sort -u | git cat-file --batch-check='%(objectname) %(objectsize)' > "$tmp.sz"
-awk 'FNR==NR { sz[$1]=$2; next }
-  { split($0, p, "\t"); h=p[1]; if (sz[h]+0 < 64) next; g[h]=g[h] "\t" p[2]; n[h]++ }
-  END { for (k in g) if (n[k]>1) print n[k] g[k] }' "$tmp.sz" "$tmp.ls" | sort -rn | cap
+# what is on disk now, not the staged copy (an edited file is no longer a duplicate); untracked files count too
+files | while IFS= read -r f; do [ -f "$f" ] && printf '%s\n' "$f"; done > "$tmp.ex"
+tr '\n' '\0' < "$tmp.ex" | xargs -0 wc -c 2>/dev/null \
+  | awk '{ n=$1; sub(/^ *[0-9]+ /, ""); if ($0 != "total" && n >= 64) print }' > "$tmp.big"
+# shellcheck disable=SC2094  # reads one temp file twice, writes nothing
+{ [ -s "$tmp.big" ] && git hash-object --stdin-paths < "$tmp.big" | paste - "$tmp.big"; } \
+  | awk -F'\t' '{ g[$1]=g[$1] "\t" $2; n[$1]++ } END { for (k in g) if (n[k]>1) print n[k] g[k] }' | sort -rn | cap
 
 echo "== versioned siblings (same name, different version: keep the live one) =="
 files | awk '{

@@ -19,7 +19,7 @@ cap() { awk -v max="$MAX" 'NR<=max{print} END{if(NR>max) printf "... %d more\n",
 human() { awk '{ s=$1; u="KB"; if (s>=1024){s/=1024; u="MB"} if (s>=1024){s/=1024; u="GB"} $1=sprintf("%.1f%s", s, u); print }'; }
 
 # NUL-separated paths on stdin -> kb<TAB>label<TAB>path, only those >= MIN_KB (disk blocks, so small files round up)
-big() { xargs -0 -r du -sk 2>/dev/null | awk -F'\t' -v m="$MIN_KB" -v t="$1" '$1>=m {print $1 "\t" t "\t" $2}'; }
+big() { xargs -0 -r du -sk -- 2>/dev/null | awk -F'\t' -v m="$MIN_KB" -v t="$1" '$1>=m {print $1 "\t" t "\t" $2}'; }
 
 echo "== big files now (>= ${MIN_KB}KB) =="
 { git ls-files -z | big tracked; git ls-files -z --others --exclude-standard | big not-ignored; } \

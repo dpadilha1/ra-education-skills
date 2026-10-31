@@ -16,8 +16,11 @@ the repo more access than needed.
      (Supabase anon/publishable key, Stripe `pk_`, Mercado Pago public key,
      Turnstile site key).
    - Real: anything else that looks like a working credential.
-   - A JWT is real if its variable name says `service_role`, `secret` or
-     `admin`; fine if it says `anon` or `publishable`.
+   - A JWT: the variable name is a hint, the token's own `role` claim decides.
+     Read it without printing the token (this prints only the role):
+     `sed -n '<line>p' <file> | grep -oE 'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}' | head -1 | cut -d. -f2 | tr '_-' '/+' | awk '{ while (length($0)%4) $0=$0 "="; print }' | { base64 -d 2>/dev/null || base64 -D 2>/dev/null; } | grep -oE '"role" *: *"[a-z_]+"'`.
+     `anon` → fine. `service_role`, `authenticated`, anything else, or
+     nothing readable → real or **user decides**, even if the name says `anon`.
    - To see a hit in context, never print the raw line. Print it with
      everything after the first `=` or `:` cut to 4 characters, and every
      word of 6+ characters masked:
@@ -28,7 +31,7 @@ the repo more access than needed.
    - Before asking the user, look for the answer yourself, and cite it:
      - what the lines around the hit point at. The mask above hides that,
        so print only hosts and environment words, never values:
-       `awk -v l=<line> 'NR>=l-10 && NR<=l+10' <file> | grep -oiE 'https?://[A-Za-z0-9.-]+|prod(uction)?|staging|sandbox|test|dev|localhost|127\.0\.0\.1' | sort -u`.
+       `awk -v l=<line> 'NR>=l-10 && NR<=l+10' <file> | sed -E 's#(https?://)[^/@[:space:]]*@#\1#g' | grep -oiE 'https?://[A-Za-z0-9.-]+|prod(uction)?|staging|sandbox|test|dev|localhost|127\.0\.0\.1' | sort -u`.
        A production host or project id there answers "is it real".
      - the project's own rules (its instruction files and the docs they point to for
        secrets): a rule like "a leaked key gets rotated" decides the fix.
@@ -36,7 +39,8 @@ the repo more access than needed.
    - Unsure → **user decides**, with what you found and what is still open.
 
 3. **Repo visibility**, per repo, first answer wins:
-   - `git remote -v` empty → **local only**: nothing in it is public.
+   - `git remote` (names only: `-v` would print URLs, which can hold a token)
+     empty → **local only**: nothing in it is public.
    - `gh repo view --json visibility -q .visibility` (a GitHub remote).
    - `gh` missing, offline or blocked by the sandbox → the `visibility` line
      in `cleanup.md`, said as "per cleanup.md".

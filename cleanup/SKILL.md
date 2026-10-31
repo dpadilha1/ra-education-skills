@@ -57,7 +57,8 @@ Gemini CLI...). "The agent" below means you.
    If the folder holds git repos below it but none at the top, offer these
    three, recommending C:
    - A. Run on each repo, one after the other (skips the loose files around them).
-   - B. Scan the whole folder, fix only inside the repos (loose files: report only).
+   - B. Like A, and name the loose files around the repos. The scripts read
+     git, so those files are not scanned: say so in the report.
    - C. `git init` the top folder, local only, no remote; the nested repos go
      in its `.gitignore`. No commit until security and bloat have scanned, so
      no secret or big file enters history; show the first commit's file list
@@ -164,8 +165,10 @@ No mode word → (none).
   run leaves them out.
 
 ## 3. Report
-- Fill `templates/report.md`: one table, findings numbered across all modes
-  (1, 2, 3...) so the user can answer "do 1, 3, 5".
+- Fill `templates/report.md`: one findings table, numbered across all modes
+  (1, 2, 3...) so the user can answer "do 1, 3, 5". A finding that needs an
+  answer goes in the template's "User decides" table instead, never in both;
+  its number continues the same sequence.
 - Every finding states its evidence and its proposed fix.
 - Numbers (counts, sizes, lines) come from the scan output: quote them, don't
   recount by hand. If a later step finds a different number, say which is
@@ -291,11 +294,14 @@ save the run to the agent's memory unless the user asks.
 - **Some actions always need their own OK**, even inside "do all" or "all high":
   deletes, history rewrites, force pushes, uploads (cold storage, secret stores).
 - **Never delete** outside `archive` mode. There, Delete is a verdict that needs
-  the user's OK per item. A file git tracks can be restored from history
-  (before the delete is committed, `git checkout HEAD -- <path>`;
-  after, `git checkout "$(git rev-list -n1 HEAD -- <path>)^" -- <path>`);
-  any other file, even one inside a tracked archive, is gone for good. Say
-  which, per file. Ask the same way either way.
+  the user's OK per item. A file whose current contents are committed
+  can be restored from history (before the delete is committed,
+  `git checkout HEAD -- <path>`; after,
+  `git checkout "$(git rev-list -n1 HEAD -- <path>)^" -- <path>`). Any other
+  file is gone for good: untracked, newly staged, or edited since the last
+  commit (those edits are lost; commit them first if they matter), even
+  inside a tracked archive. Say which, per file; the check is in
+  `modes/archive.md`. Ask the same way either way.
   Only exception: removing an empty folder (nothing inside to lose), logged in
   `MOVES.tsv`.
 - **Evidence or no finding.** Every finding names its proof: `0 references (grep)`,

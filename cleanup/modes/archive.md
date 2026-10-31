@@ -72,11 +72,18 @@ storage (where and how to upload), protected paths, retention rules (e.g.
      folder with its full file list shown.
   2. Remove only those paths.
   3. Log each one in `LEDGER.tsv` (date, path, size, reason).
-  Only a file git tracks can be restored (the script's first section counts
-  them per archive; check one with `git ls-files --error-unmatch <path>`):
-  before the delete is committed, `git checkout HEAD -- <path>`;
-  after, `git checkout "$(git rev-list -n1 HEAD -- <path>)^" -- <path>`. Any other file is gone for good, even inside a tracked
-  archive. Mark each file in the list. Same OK per item either way.
+  Only a file whose current contents are committed can be restored (the
+  script's first section counts tracked files and the ones with uncommitted
+  changes, per archive). Check one:
+  `git cat-file -e HEAD:<path> && git diff --quiet HEAD -- <path>`
+  (exit 0 = restorable; an untracked or newly staged file fails the first
+  part, an edited one the second; a committed file already gone from disk
+  fails the second but `git checkout HEAD -- <path>` still brings it back). Before the delete is committed, restore
+  with `git checkout HEAD -- <path>`; after,
+  `git checkout "$(git rev-list -n1 HEAD -- <path>)^" -- <path>`. Any other
+  file is gone for good, even inside a tracked archive; for an edited tracked
+  file say that its edits are lost, and offer to commit them first. Mark each
+  file in the list. Same OK per item either way.
 - **Always:** `MOVES.tsv` and `LEDGER.tsv` are never deleted. When a whole
   folder goes, its `MOVES.tsv` stays as the record. `LEDGER.tsv` lives at the
   root of the archive it logs (format: `templates/LEDGER.tsv`).
