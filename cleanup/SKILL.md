@@ -3,7 +3,7 @@ name: cleanup
 description: Audit a project folder for bloat, messy structure, security leaks, heavy AI-agent context and a stale archive, then fix only what the user approves. Run it by name (/cleanup in Claude Code, $cleanup in Codex); alone it runs every check, with a mode it runs one (bloat, structure, security, context, archive). Use only when the user asks for it by name. Reports first; never deletes without an explicit OK.
 license: MIT
 compatibility: Agent Skills format (Claude Code, Codex, Gemini CLI and others). Needs git and bash; the scripts run on macOS and Linux.
-argument-hint: "[bloat | structure | security | context | archive | archive all]"
+argument-hint: "[help | bloat | structure | security | context | archive | archive all]"
 disable-model-invocation: true
 ---
 
@@ -11,6 +11,24 @@ disable-model-invocation: true
 
 Scan a project, report what's messy, fix only what the user approves.
 Flow: **scan → report → approve → fix → verify → confirm.**
+
+## How to use (show this when the user asks for `help`)
+Print this block as is, then stop. Do not scan anything.
+
+- **Run it:** ask for it by name inside the project (a git repo). Claude Code:
+  `/cleanup`. Codex: `$cleanup`. Gemini CLI: "run the cleanup skill".
+- **One mode** instead of all five: add the word. `security` (leaked keys,
+  passwords, risky permissions), `bloat` (big and unused files), `structure`
+  (messy folders), `context` (what bloats the agent's instructions),
+  `archive` (old docs past their review age; `archive all` for every one).
+- **First run:** it asks a few questions (where your archive lives, what to
+  protect) and saves the answers in `.claude/cleanup.md` (`.agents/cleanup.md`
+  on other agents). Commit that file; later runs read it and stay quiet about
+  what you already decided.
+- **Then:** read the numbered report and answer with numbers: "do 1, 3, 5",
+  "all high", "none". Nothing changes until you do. Every move is logged and
+  checked first; a fresh check verifies the result before it says done.
+- It never prints a secret: file and line, plus the first 4 characters.
 
 ## 0. Any agent
 This skill runs on any agent that reads Agent Skills (Claude Code, Codex,
@@ -119,6 +137,7 @@ No mode word → (none).
 | context      | `modes/context.md`  |
 | archive      | `modes/archive.md` (folders past the review age) |
 | archive all  | `modes/archive.md` (every archive folder) |
+| help         | the "How to use" block above, then stop |
 | (none)       | all five, in this order: security, bloat, structure, context, archive |
 
 - Read one mode at a time: finish its scan, keep its findings, then open the next.

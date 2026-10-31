@@ -57,6 +57,8 @@ Open the agent inside the project (a git repo) and ask for it by name:
 | Codex | `$cleanup` | `$cleanup security` |
 | Gemini CLI | "run the cleanup skill" (it asks to activate it) | "run cleanup, security mode" |
 
+Add the word `help` (`/cleanup help`) to print a short guide and stop.
+
 It is meant to run only when you ask: Claude Code and Codex enforce that; Gemini CLI asks you before it activates any skill.
 
 **First run:** it asks a few questions (where your archive lives, what to protect)
