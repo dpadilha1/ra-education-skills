@@ -29,9 +29,11 @@ tok() { wc -c < "$1" | awk '{printf "%d", $1/4}'; }          # rough: ~4 bytes p
 short() { sed -e "s|^$PWD/||" -e "s|^$HOME|~|"; }
 files() { git ls-files; git ls-files --others --exclude-standard; }
 
-tmp="$(mktemp "${TMPDIR:-/tmp}/context.XXXXXX")"
+umask 077   # the temp files hold repository paths and hashes: nobody else reads them
+tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/context.XXXXXX")" || exit 1   # a private folder: a planted symlink in a shared /tmp can't redirect a write
+tmp="$tmpdir/t"
 always="$tmp.always"; demand="$tmp.demand"; scan="$tmp.scan"; hop="$tmp.hop"
-trap 'rm -f "$tmp" "$always" "$demand" "$scan" "$hop" "$tmp.all" "$tmp.arch" "$tmp.arch2" "$tmp.other"' EXIT
+trap 'rm -rf "$tmpdir"' EXIT
 : > "$always"; : > "$demand"
 
 add() { [ -f "$1" ] && ! grep -qxF "$1" "$always" && echo "$1" >> "$always"; return 0; }

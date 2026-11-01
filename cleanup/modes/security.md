@@ -17,11 +17,10 @@ the repo more access than needed.
      Turnstile site key).
    - Real: anything else that looks like a working credential.
    - A JWT: the variable name is a hint, the token's own `role` claim decides.
-     Read it without printing the token (this prints only the role):
-     `sed -n '<line>p' <file> | grep -oE 'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}' | cut -d. -f2 | while IFS= read -r p; do printf '%s\n' "$p" | tr '_-' '/+' | awk '{ while (length($0)%4) $0=$0 "="; print }' | { base64 -d 2>/dev/null || base64 -D 2>/dev/null; } | grep -oE '"role" *: *"[a-z_]+"'; done`
-     (one role per token on that line, in order: judge each token by its own).
-     `anon` → fine. `service_role`, `authenticated`, anything else, or
-     nothing readable → real or **user decides**, even if the name says `anon`.
+     Run `<skill>/scripts/jwt_roles.sh <file> <line>`: it prints one result
+     per token on that line, in order, and never the token. `anon` → fine.
+     `service_role`, `authenticated`, any other role or `unknown` → real or
+     **user decides**, even if the name says `anon`.
    - To see a hit in context, never print the raw line. Print it with
      everything after the first `=` or `:` cut to 4 characters, and every
      word of 6+ characters masked:

@@ -42,9 +42,10 @@ AV='\.(mp4|mov|m4v|avi|mkv|webm|wav|mp3|m4a|aiff?|flac)$'
 REBUILD='(^|/)(node_modules|\.next|dist|build|\.wrangler|__pycache__|\.venv|venv)(/|$)'
 COMMON='^(README|CLAUDE|AGENTS|GEMINI|index|MOVES|LEDGER|package|package-lock|LICENSE)(\.[a-z]+)?$'
 
-tmp="$(mktemp "${TMPDIR:-/tmp}/archive.XXXXXX")"
-trap 'rm -f "$tmp" "$tmp".*' EXIT
 umask 077   # the temp files hold repository paths and hashes: nobody else reads them
+tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/archive.XXXXXX")" || exit 1   # a private folder: a planted symlink in a shared /tmp can't redirect a write
+tmp="$tmpdir/t"
+trap 'rm -rf "$tmpdir"' EXIT
 # hash the list in $1 as raw bytes (no git filters); prints hash<TAB>path, and fails unless every path got a hash
 hash_list() {
   git hash-object --no-filters --stdin-paths < "$1" > "$tmp.h" 2>/dev/null || return 1

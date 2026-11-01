@@ -26,8 +26,10 @@ case "$MAX" in ""|*[!0-9]*) MAX=50 ;; esac
 
 cap() { awk -v max="$MAX" 'NR<=max{print} END{if(NR>max) printf "... %d more\n", NR-max; if(NR==0) print "none"}'; }
 
-tmp="$(mktemp "${TMPDIR:-/tmp}/unused.XXXXXX")"
-trap 'rm -f "$tmp" "$tmp".*' EXIT
+umask 077   # the temp files hold repository paths and hashes: nobody else reads them
+tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/unused.XXXXXX")" || exit 1   # a private folder: a planted symlink in a shared /tmp can't redirect a write
+tmp="$tmpdir/t"
+trap 'rm -rf "$tmpdir"' EXIT
 
 # never "unused" by design: docs for people/agents, entry points, config, dotfiles, tests, migrations
 ALWAYS='(^|/)(README|LICENSE|CHANGELOG|CLAUDE|AGENTS|GEMINI|SKILL)[^/]*$|(^|/)(index|main|app|server|worker)\.[a-z]+$|(^|/)(package|tsconfig|jsconfig|wrangler|vercel|netlify|vite\.config|next\.config|tailwind\.config|postcss\.config|eslint|prettier)[^/]*$|(^|/)\.[^/]+$|(^|/)(test|tests|__tests__|migrations|\.github|\.claude|\.agents|\.codex|\.gemini)/|\.(test|spec)\.[a-z]+$|(^|/)(favicon|robots|sitemap|manifest)'

@@ -26,8 +26,10 @@ case "$MAX" in ""|*[!0-9]*) MAX=40 ;; esac
 
 cap() { awk -v max="$MAX" 'NR<=max{print} END{if(NR>max) printf "... %d more\n", NR-max; if(NR==0) print "none"}'; }
 
-list="$(mktemp "${TMPDIR:-/tmp}/tree.XXXXXX")"; dirs="$list.dirs"; kids="$list.kids"
-trap 'rm -f "$list" "$list.all" "$dirs" "$kids"' EXIT
+umask 077   # the temp files hold repository paths and hashes: nobody else reads them
+tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/tree.XXXXXX")" || exit 1   # a private folder: a planted symlink in a shared /tmp can't redirect a write
+list="$tmpdir/list"; dirs="$list.dirs"; kids="$list.kids"
+trap 'rm -rf "$tmpdir"' EXIT
 
 # every file git sees (tracked + untracked not ignored), every folder above them
 # archive contents left out: a tracked archive is judged by the archive check, not as live folders
