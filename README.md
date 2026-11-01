@@ -85,6 +85,10 @@ about what you already decided.
 See [TESTING.md](TESTING.md): real runs on real projects, a cold review of every change,
 and a re-run that should come back quiet.
 
+## About
+
+Built and maintained by Diego Riviere Padilha as a personal, non-commercial project, in my free time. It generates no income.
+
 ## License
 
 [MIT](LICENSE): use, change and share freely; keep the copyright notice.
