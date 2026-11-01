@@ -87,7 +87,7 @@ and a re-run that should come back quiet.
 
 ## About
 
-Built and maintained by Diego Riviere Padilha as a personal, non-commercial project, in my free time. It generates no income.
+Built and maintained by Diego Riviere Padilha as a personal project, in my free time.
 
 ## License
 
