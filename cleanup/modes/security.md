@@ -21,6 +21,8 @@ the repo more access than needed.
      per token on that line, in order, and never the token. `anon` → fine.
      `service_role`, `authenticated`, any other role or `unknown` → real or
      **user decides**, even if the name says `anon`.
+     A history-only hit (the file is gone, so there is no line to read) has an
+     unknown role: **user decides**.
    - To see a hit in context, never print the raw line. Print it with
      everything after the first `=` or `:` cut to 4 characters, and every
      word of 6+ characters masked:
