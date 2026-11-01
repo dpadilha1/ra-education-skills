@@ -296,8 +296,8 @@ save the run to the agent's memory unless the user asks.
 - **Never delete** outside `archive` mode. There, Delete is a verdict that needs
   the user's OK per item. A file whose current contents are committed
   can be restored from history (before the delete is committed,
-  `git checkout HEAD -- <path>`; after,
-  `git checkout "$(git rev-list -n1 HEAD -- <path>)^" -- <path>`). Any other
+  `git --literal-pathspecs checkout HEAD -- "<path>"`; after,
+  `git --literal-pathspecs checkout "$(git --literal-pathspecs rev-list -n1 HEAD -- "<path>")^" -- "<path>"`). Any other
   file is gone for good: untracked, newly staged, or edited since the last
   commit (those edits are lost; commit them first if they matter), even
   inside a tracked archive. Say which, per file; the check is in

@@ -65,8 +65,8 @@ mask() {
     v=tolower(m)
     if (v ~ /^(process\.env|import\.meta\.env|os\.environ|getenv)/) next
     if (v ~ /your[_-]|example|placeholder|changeme|xxxx|replace[_-]?me|[_-]here$/) next
-    if (n=="generic-assignment" && v ~ /^([$<{%(*]|(passw|secret|string|required|undefined|null|true|false|none|empty|hidden)[a-z_]*$)/) next   # a reference, a type or a label, not a value
-    print n, f ":" l, substr(m, 1, 4) "...(" length(m) " chars)", k
+    if (n=="generic-assignment" && (v ~ /^\$\{?[a-z_][a-z0-9_]*\}?$/ || v ~ /^\$\{[^}]*\}$/ || v ~ /^(\$\(|\{\{|%[({]|<[^>]*>$|\*+$)/ || v ~ /^(passw|secret|string|required|undefined|null|true|false|none|empty|hidden)[a-z_]*$/)) next   # a reference, a type or a label, not a value
+    print n, f ":" l, substr(m, 1, 4) "...(" length(m) " chars)", k, m   # 5th field: the full value, only so two keys with one prefix stay two findings; cut -f1-4 drops it before printing
   }'
 }
 
@@ -77,7 +77,7 @@ patterns | while IFS=$'\t' read -r name re; do
     git grep $flags --untracked -e "$re" -- . ':!*.lock' ':!package-lock.json' ':!pnpm-lock.yaml' 2>/dev/null
     [ -f .claude/settings.local.json ] && grep -H $flags -e "$re" .claude/settings.local.json
   } | mask "$name"
-done | awk -F'\t' '!seen[$2 FS $3 FS $4]++' | cap
+done | awk -F'\t' '!seen[$2 FS $3 FS $4 FS $5]++' | cut -f1-4 | cap
 
 echo "== secrets in git history (pattern, commit:file, masked value, key, file now) =="
 # one line per added line in any commit: commit:file:content
@@ -93,7 +93,7 @@ patterns | while IFS=$'\t' read -r name re; do
     c="${line%%:*}"; rest="${line#*:}"; f="${rest%%:*}"; body="${rest#*:}"
     printf '%s\n' "$body" | grep -o $flags -e "$re" | while IFS= read -r m; do printf '%s:%s:%s\n' "$c" "$f" "$m"; done
   done | mask "$name"
-done | awk -F'\t' '{ f=$2; sub(/^[^:]*:/, "", f); key=$1 FS f FS $3 FS $4; if (!seen[key]++) print }' \
+done | awk -F'\t' '{ f=$2; sub(/^[^:]*:/, "", f); key=$1 FS f FS $3 FS $4 FS $5; if (!seen[key]++) print }' | cut -f1-4 \
   | while IFS=$'\t' read -r n cf v k; do
   f="${cf#*:}"; if [ -e "$f" ]; then s="file exists (current-files section says if the secret is still in it)"; else s="file deleted"; fi
   printf '%s\t%s\t%s\t%s\t%s\n' "$n" "$cf" "$v" "$k" "$s"

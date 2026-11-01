@@ -79,12 +79,21 @@ awk -F'\t' '
 
 echo "== exact duplicates (count, then paths; files under 64 bytes skipped) =="
 # what is on disk now, not the staged copy (an edited file is no longer a duplicate); untracked files count too
-files | while IFS= read -r f; do [ -f "$f" ] && printf '%s\n' "$f"; done > "$tmp.ex"
-tr '\n' '\0' < "$tmp.ex" | xargs -0 wc -c 2>/dev/null \
+# (regular files only: a symlink and its target are not duplicates, and archiving the target would break the link)
+files | while IFS= read -r f; do [ -f "$f" ] && [ ! -L "$f" ] && { [ -r "$f" ] && printf '%s\n' "$f" || echo "$f" >> "$tmp.unr"; }; done > "$tmp.ex"
+tr '\n' '\0' < "$tmp.ex" | xargs -0 wc -c -- 2>/dev/null \
   | awk '{ n=$1; sub(/^ *[0-9]+ /, ""); if ($0 != "total" && n >= 64) print }' > "$tmp.big"
-# shellcheck disable=SC2094  # reads one temp file twice, writes nothing
-{ [ -s "$tmp.big" ] && git hash-object --stdin-paths < "$tmp.big" | paste - "$tmp.big"; } \
-  | awk -F'\t' '{ g[$1]=g[$1] "\t" $2; n[$1]++ } END { for (k in g) if (n[k]>1) print n[k] g[k] }' | sort -rn | cap
+if [ ! -s "$tmp.big" ]; then
+  echo "none"
+elif git hash-object --no-filters --stdin-paths < "$tmp.big" > "$tmp.h" 2>/dev/null \
+  && [ "$(wc -l < "$tmp.h" | tr -d ' ')" = "$(wc -l < "$tmp.big" | tr -d ' ')" ]; then
+  # raw bytes, no git filters (CRLF and LF copies differ); one hash per path or no grouping at all
+  paste "$tmp.h" "$tmp.big" \
+    | awk -F'\t' '{ g[$1]=g[$1] "\t" $2; n[$1]++ } END { for (k in g) if (n[k]>1) print n[k] g[k] }' | sort -rn | cap
+else
+  echo "not checked: git could not hash every file"
+fi
+[ -s "$tmp.unr" ] && echo "not checked: $(wc -l < "$tmp.unr" | tr -d ' ') unreadable file(s) left out of the duplicate check"
 
 echo "== versioned siblings (same name, different version: keep the live one) =="
 files | awk '{

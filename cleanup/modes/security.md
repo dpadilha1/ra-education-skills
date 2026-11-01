@@ -18,7 +18,8 @@ the repo more access than needed.
    - Real: anything else that looks like a working credential.
    - A JWT: the variable name is a hint, the token's own `role` claim decides.
      Read it without printing the token (this prints only the role):
-     `sed -n '<line>p' <file> | grep -oE 'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}' | head -1 | cut -d. -f2 | tr '_-' '/+' | awk '{ while (length($0)%4) $0=$0 "="; print }' | { base64 -d 2>/dev/null || base64 -D 2>/dev/null; } | grep -oE '"role" *: *"[a-z_]+"'`.
+     `sed -n '<line>p' <file> | grep -oE 'eyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}' | cut -d. -f2 | while IFS= read -r p; do printf '%s\n' "$p" | tr '_-' '/+' | awk '{ while (length($0)%4) $0=$0 "="; print }' | { base64 -d 2>/dev/null || base64 -D 2>/dev/null; } | grep -oE '"role" *: *"[a-z_]+"'; done`
+     (one role per token on that line, in order: judge each token by its own).
      `anon` → fine. `service_role`, `authenticated`, anything else, or
      nothing readable → real or **user decides**, even if the name says `anon`.
    - To see a hit in context, never print the raw line. Print it with
@@ -40,7 +41,9 @@ the repo more access than needed.
 
 3. **Repo visibility**, per repo, first answer wins:
    - `git remote` (names only: `-v` would print URLs, which can hold a token)
-     empty → **local only**: nothing in it is public.
+     empty → **no remote here**: this copy publishes nothing. A removed remote
+     leaves no trace, so if the project's docs name a hosting repo, treat
+     visibility as unknown.
    - `gh repo view --json visibility -q .visibility` (a GitHub remote).
    - `gh` missing, offline or blocked by the sandbox → the `visibility` line
      in `cleanup.md`, said as "per cleanup.md".

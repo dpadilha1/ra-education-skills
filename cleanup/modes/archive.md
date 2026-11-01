@@ -75,12 +75,15 @@ storage (where and how to upload), protected paths, retention rules (e.g.
   Only a file whose current contents are committed can be restored (the
   script's first section counts tracked files and the ones with uncommitted
   changes, per archive). Check one:
-  `git cat-file -e HEAD:<path> && git diff --quiet HEAD -- <path>`
+  `git cat-file -e HEAD:<path> && git --literal-pathspecs diff --quiet HEAD -- <path>`
   (exit 0 = restorable; an untracked or newly staged file fails the first
   part, an edited one the second; a committed file already gone from disk
-  fails the second but `git checkout HEAD -- <path>` still brings it back). Before the delete is committed, restore
-  with `git checkout HEAD -- <path>`; after,
-  `git checkout "$(git rev-list -n1 HEAD -- <path>)^" -- <path>`. Any other
+  fails the second but the restore below still brings it back). If the
+  project uses git clean filters or `assume-unchanged`, `diff` can miss an
+  edit: say so, and ask for a copy of the file first. Before the delete is
+  committed, restore with `git --literal-pathspecs checkout HEAD -- "<path>"`;
+  after, `git --literal-pathspecs checkout "$(git --literal-pathspecs rev-list -n1 HEAD -- "<path>")^" -- "<path>"`
+  (literal, so a name like `report[1].txt` never matches another file). Any other
   file is gone for good, even inside a tracked archive; for an edited tracked
   file say that its edits are lost, and offer to commit them first. Mark each
   file in the list. Same OK per item either way.

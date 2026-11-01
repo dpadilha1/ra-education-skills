@@ -44,12 +44,19 @@ COMMON='^(README|CLAUDE|AGENTS|GEMINI|index|MOVES|LEDGER|package|package-lock|LI
 
 tmp="$(mktemp "${TMPDIR:-/tmp}/archive.XXXXXX")"
 trap 'rm -f "$tmp" "$tmp".*' EXIT
+umask 077   # the temp files hold repository paths and hashes: nobody else reads them
+# hash the list in $1 as raw bytes (no git filters); prints hash<TAB>path, and fails unless every path got a hash
+hash_list() {
+  git hash-object --no-filters --stdin-paths < "$1" > "$tmp.h" 2>/dev/null || return 1
+  [ "$(wc -l < "$tmp.h" | tr -d ' ')" = "$(wc -l < "$1" | tr -d ' ')" ] || return 1
+  paste "$tmp.h" "$1"
+}
 # live files (tracked + untracked not ignored), never the archive itself: hash of what is on disk now<TAB>path
 git ls-files --cached --others --exclude-standard | grep -vE "^($ARCH_RE)/" \
-  | while IFS= read -r f; do [ -f "$f" ] && printf '%s\n' "$f"; done > "$tmp.livefiles"
+  | while IFS= read -r f; do [ -f "$f" ] && [ ! -L "$f" ] && printf '%s\n' "$f"; done > "$tmp.livefiles"
 : > "$tmp.live"
-# shellcheck disable=SC2094  # reads one temp file, writes another
-[ -s "$tmp.livefiles" ] && git hash-object --stdin-paths < "$tmp.livefiles" | paste - "$tmp.livefiles" > "$tmp.live"
+live_ok=1
+if [ -s "$tmp.livefiles" ]; then hash_list "$tmp.livefiles" > "$tmp.live" || { live_ok=0; : > "$tmp.live"; }; fi
 : > "$tmp.review"; T_ALL=0; T_TXT=0; T_MED=0; T_REB=0; young=0; young_kb=0
 now=$(date +%s)
 
@@ -115,11 +122,15 @@ awk -v code="$CODE" 'FILENAME==ARGV[1] { i=index($0, ":"); m=substr($0, i+1); if
 echo "== exact copy exists live (archived file = live path; files under 64 bytes skipped) =="
 while IFS= read -r d; do find "$d" -type f -size +63c ! -name .DS_Store ! -name MOVES.tsv; done < "$tmp.review" \
   | grep -vE "$REBUILD" > "$tmp.sized"
-if [ -s "$tmp.sized" ]; then
-  # shellcheck disable=SC2094  # reads the same list twice, writes nothing
-  git hash-object --stdin-paths < "$tmp.sized" | paste - "$tmp.sized" \
-    | awk -F'\t' 'FNR==NR { if (!($1 in live)) live[$1]=$2; next } ($1 in live) { print $2 "\t= " live[$1] }' "$tmp.live" - \
-    | rel | cap
+if [ "$live_ok" = 0 ]; then
+  echo "not checked: git could not hash every live file"
+elif [ -s "$tmp.sized" ]; then
+  if hash_list "$tmp.sized" > "$tmp.sh"; then
+    awk -F'\t' 'FNR==NR { if (!($1 in live)) live[$1]=$2; next } ($1 in live) { print $2 "\t= " live[$1] }' "$tmp.live" "$tmp.sh" \
+      | rel | cap
+  else
+    echo "not checked: git could not hash every archived file"
+  fi
 else
   echo "none"
 fi
