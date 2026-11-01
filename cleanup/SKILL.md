@@ -114,7 +114,9 @@ Gemini CLI...). "The agent" below means you.
    must leave behind (a journal entry, a decisions-log row). Those entries
    are part of the fix: the report lists them as `T1`, `T2`... with their
    exact wording, so the user approves them like numbers. They are new rows
-   (logs stay append-only). A trail file outside the project root is
+   (logs stay append-only). A count inside one (files archived, handoffs left)
+   is a proposal: when a fix lands differently, write the real count and list
+   the entry under "changed from plan" with the wording as written. A trail file outside the project root is
    reported, not written, unless the user approves that path. On a run where
    the user approves nothing, write only the trail entries they approved.
 5. Run `git status --short`. Uncommitted work is fine for scanning. Fixes wait
@@ -268,10 +270,12 @@ number they didn't mention is not declined: it stays open, nothing is saved.
    `git mv` stages at once, so an earlier fix can ride along unseen.
 
 ## 5. Verify
-A fresh subagent checks the result against the approved list (no subagents
-on this agent → offer the user this list to check in a fresh session, and
-say "not verified" until then). It changes
-nothing except the output of tests and builds it runs:
+A fresh subagent checks the result against the approved list. It changes
+nothing except the output of tests and builds it runs. (No subagents on this
+agent, or the user declines one → offer the user this list to check in a
+fresh session, and say "not verified" until then.) If the project's
+instruction files require asking before a subagent, ask before launching it
+and wait for the OK: the check is part of the run, not an extra. It checks:
 - every move landed and is logged in `MOVES.tsv`
 - no live reference broke
 - nothing outside the approved list changed

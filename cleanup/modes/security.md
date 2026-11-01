@@ -47,7 +47,9 @@ the repo more access than needed.
      visibility as unknown.
    - `gh repo view --json visibility -q .visibility` (a GitHub remote).
    - `gh` missing, offline or blocked by the sandbox → the `visibility` line
-     in `cleanup.md`, said as "per cleanup.md".
+     in `cleanup.md`, said as "per cleanup.md". A real value there is an answer: it goes
+     under Clean, never under "not checked". A missing line, a placeholder or
+     "unknown" falls to the next bullet.
    - none of these → "unknown", listed under "not checked".
    Public raises every real secret to high.
 
@@ -66,7 +68,14 @@ the repo more access than needed.
      tool's description; still unsure → user decides. Anything else (generate, upscale, create, edit, upload, import, send,
      publish, deploy, delete, exec, invoke) can spend credits or act outward
      with no prompt. A server-wide allow (`mcp__<server>` or
-     `mcp__<server>__*`) counts as all its tools. Fix: move them to `ask`.
+     `mcp__<server>__*`) counts as all its tools. Fix: move them to `ask`. For a
+     server-wide allow, propose replacing that one line with one allow per
+     read-only tool (names from this session's tool list; the server's tools
+     not in the list → status unknown, user decides). Everything else is left
+     out of `allow` (or moved to `ask`), so it prompts. List the exact lines
+     in the report. A file under Protected paths, or outside the project, is
+     reported and the user makes the edit. New tools on the server prompt
+     until added.
      Before calling an MCP allow stale, apply "Unknown is not stale"
      (`SKILL.md` Rules).
    - no deny rules for secret files, or rules that miss subfolders (only in

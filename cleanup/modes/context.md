@@ -76,7 +76,13 @@ per folder (default 3).
      the user's OK: a summary loses detail.
    - **Handoffs:** keep the newest N per folder (the `cleanup.md` setting);
      older ones are history → archive. A handoff whose open questions no later
-     one closed → user decides. Handoffs already in an archive are history:
+     one closed → user decides. A handoff that a live file outside the
+     handoffs still depends on (a ready-to-send file, or a journal or
+     decision-log entry that points to it for an open item) stays, is
+     reported under Clean as kept with the file that cites it, and does not
+     count toward N; the keep-N count runs over the other handoffs. A
+     citation from another handoff, or a plain mention in a log, does not
+     protect it. Handoffs already in an archive are history:
      the script counts them apart, never against N, never a finding.
    - **`AGENTS.md` next to a `CLAUDE.md`:** Claude Code skips it. Import it
      from `CLAUDE.md`, or leave it if it's meant for other tools.

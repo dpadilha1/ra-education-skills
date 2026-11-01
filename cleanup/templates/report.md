@@ -32,7 +32,7 @@ One line per check that found nothing, or found only hits not worth fixing
 - findings: N (high X · medium Y · low Z) · reminders: R
 - disk freed if all approved: ~X
 - tokens saved per session if all approved: ~X
-- not checked: <what and why, e.g. "repo visibility: gh offline">
+- not checked: <what and why, e.g. "Codex permission config: not covered yet">
 
 ## Recommendation
 I'd do <numbers>: <one-line why>. I'd skip <numbers> (findings with a real
